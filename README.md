@@ -6,16 +6,20 @@ This is an intelligent water dispenser system based on the 51 MCU, which can det
 
 - Accurate and real-time display of temperature, weight, and time information
 - Automatic heating or cooling function
-- Timed reminders to drink water
+- Timed reminders and buzzer reminders to drink water
 - User-friendly interface
 
 ## Requirements
 
-- 51 MCU
-- Temperature sensor
-- Weight sensor
-- Time module
+- 51 MCU(STC89C52)
+- Temperature sensor(DS18B20)
+- Weight sensor(HX711)
+- Time module(DS1302)
 - Heating or cooling module
+## Simulation
+
+We have created a simulation of the Intelligent Water Dispenser System using Proteus software. You can find the simulation files in the simulation directory.
+It should be noted that, the simulation project need hex files:711.hex(Weighing Module) and Project.hex(51 code)
 
 ## Installation
 
@@ -33,4 +37,4 @@ This is an intelligent water dispenser system based on the 51 MCU, which can det
 
 ## Credits
 
-This project was developed by [Your Name], [Your Email], and [Your Github](https://github.com/yourgithub).
+This project was developed by Chun, zhengchh6@mail2.sysu.edu.cn, and [chunbaobao](https://github.com/chunbaobao).
