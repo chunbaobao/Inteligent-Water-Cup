@@ -1,0 +1,255 @@
+C51 COMPILER V9.54   MAIN                                                                  08/12/2022 22:41:04 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "LCD1602.h"
+   3          #include "DS1302.h"
+   4          #include "Key.h"
+   5          #include "Timer0.h"
+   6          #include "DS18B20.h"
+   7          #include "Delay.h"
+   8          #include "AT24C02.h"
+   9          #include "Buzzer.h"
+  10          #include "HX711.h"
+  11          
+  12          sbit Heat=P1^6; //加热控制端口
+  13          sbit Fefri=P1^7;//制冷控制端口
+  14          
+  15          //五种模式
+  16          //0 for 显示模式
+  17          //1 for 时间设置
+  18          //2 for 温度设置
+  19          //3 for 是否加热
+  20          //4 for 是否提醒喝水
+  21          
+  22          unsigned char KeyNum,MODE,TimeSetPos,SetFlash;
+  23          float T;
+  24          unsigned char Temp,TempJudgeFlag;
+  25          unsigned char BuzzerFlag;
+  26          unsigned long Weight,Weight_Maopi;
+  27          unsigned long FrontWeight;
+  28          //Temp为设定温度储存
+  29          
+  30          void DataShow(void)//信息显示功能
+  31          {
+  32   1        DS1302_ReadTime();//读取时间
+  33   1        LCD_ShowNum(1,6,DS1302_Time[3],2);//显示时
+  34   1        LCD_ShowNum(1,9,DS1302_Time[4],2);//显示分
+  35   1        LCD_ShowNum(1,12,DS1302_Time[5],2);//显示秒  
+  36   1        DS18B20_ConvertT();
+  37   1        T=DS18B20_ReadT();
+  38   1        if(T>0.1) LCD_ShowNum(2,3,T,2);//显示温度
+  39   1        Weight=HX711_Read()-Weight_Maopi;
+  40   1        if(Weight<=0)
+  41   1        {
+  42   2          Weight=0;
+  43   2          LCD_ShowNum(2,11,0,4);
+  44   2        }
+  45   1        else
+  46   1        {
+  47   2        Weight=(unsigned int)((float)Weight/629);
+  48   2        LCD_ShowNum(2,11,Weight,4);
+  49   2        }
+  50   1      }
+  51          //DS1302_Time为时间数组，分别为年月日时分秒
+  52          
+  53          
+  54          void TimeSet(void)//时间设置功能
+C51 COMPILER V9.54   MAIN                                                                  08/12/2022 22:41:04 PAGE 2   
+
+  55          {
+  56   1        if(KeyNum==2)//按键2按下
+  57   1        {
+  58   2          TimeSetPos++;//设置选择位加1
+  59   2          if(TimeSetPos==6) TimeSetPos=3;//越界清零
+  60   2        }
+  61   1        if(KeyNum==3)//按键3按下
+  62   1        {
+  63   2          DS1302_Time[TimeSetPos]++;//时间设置位数值加1
+  64   2          if(DS1302_Time[3]>23){DS1302_Time[3]=0;}//时越界判断
+  65   2          if(DS1302_Time[4]>59){DS1302_Time[4]=0;}//分越界判断
+  66   2          if(DS1302_Time[5]>59){DS1302_Time[5]=0;}//秒越界判断
+  67   2        }
+  68   1        if(KeyNum==4)//按键4按下
+  69   1        {
+  70   2          DS1302_Time[TimeSetPos]--;//时间设置位数值减1
+  71   2          if(DS1302_Time[3]<0){DS1302_Time[3]=23;}//时越界判断
+  72   2          if(DS1302_Time[4]<0){DS1302_Time[4]=59;}//分越界判断
+  73   2          if(DS1302_Time[5]<0){DS1302_Time[5]=59;}//秒越界判断
+  74   2        }
+  75   1        //更新显示，根据TimeSetPos和SetFlash判断可完成闪烁功能
+  76   1        if(TimeSetPos==3 && SetFlash==1){LCD_ShowString(1,6,"  ");}
+  77   1        else {LCD_ShowNum(1,6,DS1302_Time[3],2);}
+  78   1        if(TimeSetPos==4 && SetFlash==1){LCD_ShowString(1,9,"  ");}
+  79   1        else {LCD_ShowNum(1,9,DS1302_Time[4],2);}
+  80   1        if(TimeSetPos==5 && SetFlash==1){LCD_ShowString(1,12,"  ");}
+  81   1        else {LCD_ShowNum(1,12,DS1302_Time[5],2);}
+  82   1      }
+  83          
+  84          
+  85          void TemperatureSet(){
+  86   1        if(KeyNum==2)//按键2按下
+  87   1        {
+  88   2          Temp=10+Temp;//温度设置位数值加1
+  89   2          if(Temp>=100){Temp=99;}//TH越界判断
+  90   2        }
+  91   1        if(KeyNum==3)//按键3按下
+  92   1        {
+  93   2          Temp++;//温度设置位数值加1
+  94   2          if(Temp>=100){Temp=99;}//TH越界判断
+  95   2        }
+  96   1        if(KeyNum==4)//按键4按下
+  97   1        {
+  98   2          Temp-=10;//时间设置位数值减1
+  99   2          if(Temp<0){Temp=0;}//TL越界判断
+ 100   2        }
+ 101   1        //更新显示，根据TimeSetPos和SetFlash判断可完成闪烁功能
+ 102   1        /*if(SetFlash==1){LCD_ShowString(2,13,"  ");}
+ 103   1        else {LCD_ShowNum(2,13,Temp,2);}*/
+ 104   1        LCD_ShowNum(2,13,Temp,2);
+ 105   1      }
+ 106          
+ 107          void LCD_Clear(){ //清除LCD屏幕
+ 108   1        LCD_ShowString(1,1,"                ");
+ 109   1        LCD_ShowString(2,1,"                ");
+ 110   1      }
+ 111          
+ 112          void HeatOrFefri(){ //判断是否加热或制冷
+ 113   1        if(TempJudgeFlag){
+ 114   2          if (T>Temp+5) Fefri=0;
+ 115   2          else Fefri=1;
+ 116   2          if (T<Temp-5) Heat=0;
+C51 COMPILER V9.54   MAIN                                                                  08/12/2022 22:41:04 PAGE 3   
+
+ 117   2          else Heat=1;
+ 118   2        }
+ 119   1        else
+ 120   1        {
+ 121   2          Heat=1;
+ 122   2          Fefri=1;;
+ 123   2        }
+ 124   1      }
+ 125          void Remind(){//提醒喝水
+ 126   1        if(BuzzerFlag){
+ 127   2          if(DS1302_Time[3]%3==0&&DS1302_Time[5]<2&&DS1302_Time[4]==0){
+ 128   3            Buzzer_Time(2000);
+ 129   3          }
+ 130   2        }
+ 131   1      }
+ 132          
+ 133          
+ 134          void TempControl(){
+ 135   1        if(KeyNum==2)//按键2按下
+ 136   1        {
+ 137   2          TempJudgeFlag=1;
+ 138   2        }
+ 139   1        if(KeyNum==3)//按键3按下
+ 140   1        {
+ 141   2          TempJudgeFlag=0;
+ 142   2        }
+ 143   1        if(TempJudgeFlag) LCD_ShowString(2,1,"YES");
+ 144   1        else LCD_ShowString(2,1,"NO ");
+ 145   1      }
+ 146          
+ 147          void BuzzerControl(){
+ 148   1        if(KeyNum==2)//按键2按下
+ 149   1        {
+ 150   2          BuzzerFlag=1;
+ 151   2        }
+ 152   1        if(KeyNum==3)//按键3按下
+ 153   1        {
+ 154   2          BuzzerFlag=0;
+ 155   2        }
+ 156   1        if(BuzzerFlag) LCD_ShowString(2,1,"YES");
+ 157   1        else LCD_ShowString(2,1,"NO ");
+ 158   1      }
+ 159          void Get_Maopi()
+ 160          {
+ 161   1        Weight_Maopi = HX711_Read();  
+ 162   1      }
+ 163          
+ 164          void main()
+ 165          {
+ 166   1        LCD_Init();
+ 167   1        DS1302_Init();
+ 168   1        DS1302_SetTime();//设置时间
+ 169   1        Delay(100);
+ 170   1          Timer0Init();
+ 171   1        LCD_ShowString(1,1,"Time:  :  :  ");//静态字符初始化显示
+ 172   1        LCD_ShowString(2,1,"T:   C  V:    mL");
+ 173   1        LCD_ShowChar(2,5,0xDF);
+ 174   1        MODE=0;
+ 175   1        Temp=AT24C02_ReadByte(1);//从RoM读取设定温度
+ 176   1        TempJudgeFlag=AT24C02_ReadByte(2);
+ 177   1        BuzzerFlag=AT24C02_ReadByte(3);
+ 178   1        Get_Maopi();
+C51 COMPILER V9.54   MAIN                                                                  08/12/2022 22:41:04 PAGE 4   
+
+ 179   1        while(1)
+ 180   1        {
+ 181   2          KeyNum=Key();//读取键码
+ 182   2          if(KeyNum==1)//按键1按下
+ 183   2          {
+ 184   3            if(MODE==0){MODE=1;TimeSetPos=3;LCD_ShowString(2,1,"                ");}//功能切换
+ 185   3            else if(MODE==1){MODE=2;DS1302_SetTime();LCD_Clear();LCD_ShowString(2,1,"Temperature:   C");LCD_ShowCha
+             -r(2,15,0xDF);}
+ 186   3            else if(MODE==2) {MODE=3;LCD_Clear();AT24C02_WriteByte(1,Temp);LCD_ShowString(1,1,"Temp Control:");}
+ 187   3            else if(MODE==3) {MODE=4;LCD_Clear();AT24C02_WriteByte(2,TempJudgeFlag);LCD_ShowString(1,1,"Buzzer Cont
+             -rol:");}
+ 188   3            else if(MODE==4) {MODE=0;LCD_Clear();AT24C02_WriteByte(3,BuzzerFlag);LCD_ShowString(1,1,"Time:  :  :  "
+             -);LCD_ShowString(2,1,"T:   C  V:    mL");LCD_ShowChar(2,5,0xDF);}
+ 189   3          }
+ 190   2          
+ 191   2          
+ 192   2          //五种模式
+ 193   2          //0 for 显示模式 加热制冷(正常模式)
+ 194   2          //1 for 时间设置
+ 195   2          //2 for 温度设置
+ 196   2          //3 for 是否加热
+ 197   2          //4 for 是否提醒喝水
+ 198   2          
+ 199   2          switch(MODE)//根据不同的功能执行不同的函数
+ 200   2          {
+ 201   3            case 0:DataShow();HeatOrFefri();Remind();break;
+ 202   3            case 1:TimeSet();break;
+ 203   3            case 2:TemperatureSet();break;
+ 204   3            case 3:TempControl();break;
+ 205   3            case 4:BuzzerControl();break;
+ 206   3          }
+ 207   2          
+ 208   2        }
+ 209   1      }
+ 210          
+ 211          void Timer0_Routine() interrupt 1
+ 212          {
+ 213   1        static unsigned int T0Count;
+ 214   1        TL0 = 0x18;   //设置定时初值
+ 215   1        TH0 = 0xFC;   //设置定时初值
+ 216   1        T0Count++;
+ 217   1        if(T0Count>=500)//每500ms进入一次
+ 218   1        {
+ 219   2          T0Count=0;
+ 220   2          SetFlash=!SetFlash;//闪烁标志位取反
+ 221   2        }
+ 222   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1139    ----
+   CONSTANT SIZE    =    106    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     25    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
