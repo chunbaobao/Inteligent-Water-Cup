@@ -20,6 +20,7 @@ This is an intelligent water dispenser system based on the 51 MCU, which can det
 
 We have created a simulation of the Intelligent Water Dispenser System using Proteus software. You can find the simulation files in the simulation directory.
 It should be noted that, the simulation project need hex files:711.hex(Weighing Module) and Project.hex(51 code)
+![sche](https://github.com/chunbaobao/Inteligent-Water-Cup/demo/schematic.png)
 
 ## Installation
 
